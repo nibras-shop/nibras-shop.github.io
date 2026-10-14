@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>لوحة إدارة نبراس</title>
+
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      background: #11110f;
+      color: #f5f0e6;
+      font-family: Arial, sans-serif;
+      margin: 0;
+    }
+
+    .admin-wrap {
+      width: min(850px, 92%);
+      margin: 35px auto;
+    }
+
+    .admin-panel {
+      background: #1b1b18;
+      border: 1px solid #39352b;
+      border-radius: 14px;
+      padding: 22px;
+      margin: 20px 0;
+    }
+
+    h1, h2 { color: #c6a76b; }
+
+    label {
+      display: block;
+      margin: 12px 0 6px;
+    }
+
+    input, textarea, select {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 12px;
+      border-radius: 7px;
+      border: 1px solid #514832;
+      background: #11110f;
+      color: #f5f0e6;
+      font: inherit;
+    }
+
+    input[type="checkbox"] {
+      width: auto;
+    }
+
+    button {
+      cursor: pointer;
+      border-radius: 7px;
+      padding: 10px 15px;
+      margin: 8px 4px 0 0;
+      font: inherit;
+    }
+
+    .primary {
+      background: #c6a76b;
+      color: #171510;
+      border: 0;
+    }
+
+    .secondary {
+      background: transparent;
+      border: 1px solid #c6a76b;
+      color: #c6a76b;
+    }
+
+    .danger {
+      background: transparent;
+      border: 1px solid #c56b6b;
+      color: #ffaaaa;
+    }
+
+    .status {
+      color: #c6a76b;
+      overflow-wrap: anywhere;
+    }
+
+    .hidden { display: none !important; }
+
+    .product {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid #39352b;
+      flex-wrap: wrap;
+    }
+
+    .product img {
+      width: 65px;
+      height: 65px;
+      object-fit: cover;
+      border-radius: 7px;
+    }
+
+    .product-info {
+      flex: 1;
+      min-width: 130px;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="admin-wrap">
+    <h1>نبراس | لوحة الإدارة</h1>
+    <p>إدارة المسابح والأساور والأسعار والصور.</p>
+
+    <section id="login-panel" class="admin-panel">
+      <h2>تسجيل دخول المدير</h2>
+
+      <form id="login-form">
+        <label for="email">البريد الإلكتروني</label>
+        <input id="email" type="email" autocomplete="username" required>
+
+        <label for="password">كلمة المرور</label>
+        <input id="password" type="password"
+               autocomplete="current-password" required>
+
+        <button class="primary" type="submit">تسجيل الدخول</button>
+      </form>
+
+      <p id="login-status" class="status" role="status"></p>
+    </section>
+
+    <section id="dashboard" class="hidden">
+      <div class="admin-panel">
+        <p>أهلًا بك في إدارة متجر نبراس.</p>
+        <button id="logout" class="secondary" type="button">
+          تسجيل الخروج
+        </button>
+      </div>
+
+      <div class="admin-panel">
+        <h2 id="form-title">إضافة منتج</h2>
+
+        <form id="product-form">
+          <label for="name">اسم المنتج</label>
+          <input id="name" maxlength="120" required>
+
+          <label for="description">وصف المنتج</label>
+          <textarea id="description" rows="3" maxlength="1000"></textarea>
+
+          <label for="price">السعر بالدولار</label>
+          <input id="price" type="number" min="0"
+                 max="99999999" step="0.01" required>
+
+          <label for="category">التصنيف</label>
+          <select id="category">
+            <option value="مسابح">مسابح</option>
+            <option value="أساور">أساور</option>
+            <option value="أطقم">أطقم</option>
+            <option value="أخرى">أخرى</option>
+          </select>
+
+          <label for="image">صورة المنتج</label>
+          <input id="image" type="file"
+                 accept="image/jpeg,image/png,image/webp">
+
+          <label>
+            <input id="active" type="checkbox" checked>
+            عرض المنتج في المتجر
+          </label>
+
+          <button class="primary" type="submit">حفظ المنتج</button>
+          <button id="cancel-edit" class="secondary hidden"
+                  type="button">إلغاء التعديل</button>
+        </form>
+
+        <p id="product-status" class="status" role="status"></p>
+      </div>
+
+      <div class="admin-panel">
+        <h2>المنتجات الحالية</h2>
+        <div id="admin-products">جارٍ تحميل المنتجات...</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ضع بيانات مشروع Supabase الحقيقية هنا
+    const SUPABASE_URL = "https://xheziltgghwlavnnwxoc.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_0C9vtighquCRtTWoPr4pHw_6eTJpGx9";
+    const ADMIN_UID = "ca49f501-ef68-40a7-b73e-7ed85b99d988";
+
+    // اسم مساحة الصور في Supabase Storage
+    const BUCKET = "product images";
+
+    const db = supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
+
+    const $ = id => document.getElementById(id);
+
+    let editingId = null;
+    let currentImageUrl = "";
+    let products = [];
+
+    function escapeHTML(value = "") {
+      return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[char]);
+    }
+
+    function status(id, text) {
+      $(id).textContent = text;
+    }
+
+    function showDashboard(show) {
+      $("login-panel").classList.toggle("hidden", show);
+      $("dashboard").classList.toggle("hidden", !show);
+    }
+
+    async function isAdmin() {
+      const { data, error } = await db.auth.getSession();
+
+      if (error) return false;
+
+      const user = data.session?.user;
+
+      return Boolean(user && user.id === ADMIN_UID);
+    }
+
+    async function checkLogin() {
+      const allowed = await isAdmin();
+      showDashboard(allowed);
+
+      if (allowed) {
+        await loadProducts();
+      }
+    }
+
+    $("login-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      status("login-status", "جارٍ تسجيل الدخول...");
+
+      const { data, error } = await db.auth.signInWithPassword({
+        email: $("email").value.trim(),
+        password: $("password").value
+      });
+
+      if (error) {
+        status("login-status", "فشل الدخول. تحقق من البريد وكلمة المرور.");
+        return;
+      }
+
+      if (data.user.id !== ADMIN_UID) {
+        await db.auth.signOut();
+        status("login-status", "هذا الحساب غير مخوّل لإدارة المتجر.");
+        return;
+      }
+const { data: sessionData } = await db.auth.getSession();
+
+console.log("Logged-in UID:", sessionData.session?.user?.id);
+console.log("Admin UID:", ADMIN_UID);
+      status("login-status", "");
+      showDashboard(true);
+      await loadProducts();
+    });
+
+    $("logout").addEventListener("click", async () => {
+      await db.auth.signOut();
+      showDashboard(false);
+      status("login-status", "تم تسجيل الخروج.");
+    });
+
+    async function uploadImage(file) {
+      if (!file) return currentImageUrl;
+
+      const types = ["image/jpeg", "image/png", "image/webp"];
+
+      if (!types.includes(file.type)) {
+        throw new Error("استخدم صورة JPG أو PNG أو WEBP.");
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error("حجم الصورة يجب ألا يتجاوز 5 ميغابايت.");
+      }
+
+      const extension = file.type === "image/png" ? "png"
+        : file.type === "image/webp" ? "webp" : "jpg";
+
+      const path = crypto.randomUUID() + "." + extension;
+
+      const { error } = await db.storage
+        .from(BUCKET)
+        .upload(path, file, { contentType: file.type });
+
+      if (error) throw error;
+
+      const { data } = db.storage
+        .from(BUCKET)
+        .getPublicUrl(path);
+
+      return data.publicUrl;
+    }
+
+    $("product-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      status("product-status", "جارٍ حفظ المنتج...");
+
+      if (!(await isAdmin())) {
+        showDashboard(false);
+        status("product-status", "انتهت الجلسة. سجّل الدخول مجددًا.");
+        return;
+      }
+
+      const price = Number($("price").value);
+      const name = $("name").value.trim();
+
+      if (!name || !Number.isFinite(price) || price < 0) {
+        status("product-status", "تحقق من اسم المنتج والسعر.");
+        return;
+      }
+
+      try {
+        const imageUrl = await uploadImage($("image").files[0]);
+
+        const item = {
+          name,
+          description: $("description").value.trim(),
+          price,
+          category: $("category").value,
+          image_url: imageUrl,
+          is_active: $("active").checked
+        };
+
+        const result = editingId
+  ? await db.from("products")
+      .update(item)
+      .eq("id", editingId)
+      .select()
+  : await db.from("products")
+      .insert(item);
+
+        if (result.error) {
+  console.error("Product save error:", result.error);
+  status("product-status", result.error.message);
+  return;
+};
+
+        if (!result.data || result.data.length === 0) {
+          throw new Error("لم يُحفظ المنتج. افحص صلاحيات قاعدة البيانات.");
+        }
+
+        resetForm();
+        status("product-status", "تم حفظ المنتج بنجاح.");
+        await loadProducts();
+
+      } catch (error) {
+        console.error(error);
+        status("product-status", "خطأ: " + (error.message || "تعذّر الحفظ"));
+      }
+    });
+
+    async function loadProducts() {
+      $("admin-products").textContent = "جارٍ تحميل المنتجات...";
+
+      const { data, error } = await db
+        .from("products")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error(error);
+        $("admin-products").textContent =
+          "تعذّر التحميل. افحص صلاحيات جدول products.";
+        return;
+      }
+
+      products = data || [];
+
+      if (!products.length) {
+        $("admin-products").textContent = "لا توجد منتجات حتى الآن.";
+        return;
+      }
+
+      $("admin-products").innerHTML = products.map(p => `
+        <div class="product">
+          ${p.image_url
+            ? `<img src="${escapeHTML(p.image_url)}" alt="">`
+            : ""}
+          <div class="product-info">
+            <strong>${escapeHTML(p.name)}</strong>
+            <p>${escapeHTML(p.category || "أخرى")}
+              · $${Number(p.price).toFixed(2)}
+              · ${p.is_active ? "ظاهر" : "مخفي"}</p>
+          </div>
+          <button class="secondary" type="button"
+                  data-edit="${escapeHTML(p.id)}">تعديل</button>
+          <button class="danger" type="button"
+                  data-delete="${escapeHTML(p.id)}">حذف</button>
+        </div>
+      `).join("");
+    }
+
+    $("admin-products").addEventListener("click", async event => {
+      const editButton = event.target.closest("[data-edit]");
+      const deleteButton = event.target.closest("[data-delete]");
+
+      if (editButton) {
+        const p = products.find(item => item.id === editButton.dataset.edit);
+        if (!p) return;
+
+        editingId = p.id;
+        currentImageUrl = p.image_url || "";
+
+        $("name").value = p.name || "";
+        $("description").value = p.description || "";
+        $("price").value = p.price;
+        $("category").value = p.category || "مسابح";
+        $("active").checked = p.is_active !== false;
+        $("image").value = "";
+        $("form-title").textContent = "تعديل المنتج";
+        $("cancel-edit").classList.remove("hidden");
+
+        status("product-status", "اختر صورة جديدة إذا أردت تغيير الصورة الحالية.");
+        $("product-form").scrollIntoView({ behavior: "smooth" });
+      }
+
+      if (deleteButton) {
+        const p = products.find(item => item.id === deleteButton.dataset.delete);
+
+        if (!p || !confirm("هل تريد حذف المنتج " + p.name + "؟")) return;
+
+        const { error } = await db
+          .from("products")
+          .delete()
+          .eq("id", p.id);
+
+        if (error) {
+          status("product-status", "فشل الحذف. افحص صلاحيات المدير.");
+          console.error(error);
+          return;
+        }
+
+        // حذف الصورة من Storage إذا كانت ضمن المساحة المعروفة
+        if (p.image_url) {
+          try {
+            const url = new URL(p.image_url);
+            const marker = "/storage/v1/object/public/" + BUCKET + "/";
+            const index = url.pathname.indexOf(marker);
+
+            if (index !== -1) {
+              const path = decodeURIComponent(
+                url.pathname.slice(index + marker.length)
+              );
+              const { error: imageError } = await db.storage
+                .from(BUCKET).remove([path]);
+
+              if (imageError) console.warn(imageError);
+            }
+          } catch (error) {
+            console.warn(error);
+          }
+        }
+
+        status("product-status", "تم حذف المنتج.");
+        await loadProducts();
+      }
+    });
+
+    function resetForm() {
+      editingId = null;
+      currentImageUrl = "";
+      $("product-form").reset();
+      $("active").checked = true;
+      $("form-title").textContent = "إضافة منتج";
+      $("cancel-edit").classList.add("hidden");
+    }
+
+    $("cancel-edit").addEventListener("click", resetForm);
+
+    checkLogin();
+  </script>
+</body>
+</html>
