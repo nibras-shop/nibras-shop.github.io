@@ -1,9 +1,7 @@
 const SUPABASE_URL = "https://xheziltgghwlavnnwxoc.supabase.co";
 const SUPABASE_KEY = "sb_publishable_0C9vtighquCRtTWoPr4pHw_6eTJpGx9";
 
-// Public storefront client. Never put a service-role/secret key here.
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
 const WHATSAPP_NUMBER = "96176096582";
 
 const productList = document.getElementById("product-list");
@@ -12,6 +10,7 @@ const productCount = document.getElementById("product-count");
 const cartList = document.getElementById("cart-list");
 const cartTotal = document.getElementById("cart-total");
 const checkoutButton = document.getElementById("checkout");
+const searchInput = document.getElementById("product-search");
 
 const cart = new Map();
 let products = [];
@@ -32,6 +31,16 @@ function formatPrice(value) {
   return "$" + Number(value).toFixed(2);
 }
 
+// توحيد بعض أشكال الحروف العربية لتسهيل البحث
+function normalizeText(value = "") {
+  return String(value)
+    .toLowerCase()
+    .trim()
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه");
+}
+
 async function loadProducts() {
   statusBox.textContent = "جارٍ تحميل المنتجات...";
 
@@ -42,23 +51,39 @@ async function loadProducts() {
     .order("created_at", { ascending: false });
 
   if (error) {
-    statusBox.textContent =
-      "تعذّر تحميل المنتجات. تأكد من بيانات الاتصال وسياسات قاعدة البيانات.";
+    statusBox.textContent = "تعذّر تحميل المنتجات. تحقق من الاتصال بقاعدة البيانات.";
     console.error(error);
     return;
   }
 
   products = data || [];
-  productCount.textContent = `${products.length} منتجات`;
-  statusBox.textContent = products.length
-    ? ""
-    : "لا توجد منتجات مضافة حاليًا. أضف منتجات من لوحة الإدارة لاحقًا.";
-
   renderProducts();
 }
 
 function renderProducts() {
-  productList.innerHTML = products.map((product) => {
+  const query = normalizeText(searchInput ? searchInput.value : "");
+
+  const filteredProducts = products.filter((product) => {
+    const searchableText = normalizeText([
+      product.name,
+      product.description,
+      product.category
+    ].join(" "));
+
+    return searchableText.includes(query);
+  });
+
+  productCount.textContent = `${filteredProducts.length} منتجات`;
+
+  if (products.length === 0) {
+    statusBox.textContent = "لا توجد منتجات مضافة حاليًا.";
+  } else if (filteredProducts.length === 0) {
+    statusBox.textContent = "لم نجد منتجات مطابقة لبحثك.";
+  } else {
+    statusBox.textContent = "";
+  }
+
+  productList.innerHTML = filteredProducts.map((product) => {
     const image = product.image_url
       ? `<img src="${escapeHTML(product.image_url)}" alt="${escapeHTML(product.name)}" loading="lazy">`
       : `<div class="product-placeholder">نبراس</div>`;
@@ -77,6 +102,10 @@ function renderProducts() {
       </article>
     `;
   }).join("");
+}
+
+if (searchInput) {
+  searchInput.addEventListener("input", renderProducts);
 }
 
 productList.addEventListener("click", (event) => {
@@ -111,9 +140,7 @@ function renderCart() {
       <div class="cart-row">
         <span>${escapeHTML(product.name)} × ${quantity}</span>
         <span>${formatPrice(Number(product.price) * quantity)}</span>
-        <button class="remove-button" data-remove="${escapeHTML(id)}">
-          حذف
-        </button>
+        <button class="remove-button" data-remove="${escapeHTML(id)}">حذف</button>
       </div>
     `);
   }
@@ -149,8 +176,8 @@ checkoutButton.addEventListener("click", () => {
   }
 
   lines.push(`المجموع: ${formatPrice(total)}`);
-  const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join("\n"))}`;
 
+  const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join("\n"))}`;
   window.open(url, "_blank", "noopener,noreferrer");
 });
 
