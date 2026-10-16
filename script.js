@@ -10,6 +10,10 @@ const productCount = document.getElementById("product-count");
 const cartList = document.getElementById("cart-list");
 const cartTotal = document.getElementById("cart-total");
 const checkoutButton = document.getElementById("checkout");
+const floatingCart = document.getElementById("cart-floating");
+const floatingCount = document.getElementById("cart-floating-count");
+const floatingTotal = document.getElementById("cart-floating-total");
+const floatingCheckout = document.getElementById("cart-floating-checkout");
 const searchInput = document.getElementById("product-search");
 
 const cart = new Map();
@@ -120,33 +124,55 @@ productList.addEventListener("click", (event) => {
   renderCart();
 });
 
-function renderCart() {
-  if (cart.size === 0) {
-    cartList.textContent = "لم تضف أي منتجات بعد.";
-    cartTotal.textContent = "$0.00";
-    return;
-  }
-
+ function renderCart() {
   let total = 0;
+  let quantityTotal = 0;
   const rows = [];
 
   for (const [id, quantity] of cart) {
     const product = products.find((item) => String(item.id) === id);
     if (!product) continue;
 
-    total += Number(product.price) * quantity;
+    const itemTotal = Number(product.price) * quantity;
+    total += itemTotal;
+    quantityTotal += quantity;
 
     rows.push(`
       <div class="cart-row">
         <span>${escapeHTML(product.name)} × ${quantity}</span>
-        <span>${formatPrice(Number(product.price) * quantity)}</span>
+        <span>${formatPrice(itemTotal)}</span>
         <button class="remove-button" data-remove="${escapeHTML(id)}">حذف</button>
       </div>
     `);
   }
 
-  cartList.innerHTML = rows.join("");
-  cartTotal.textContent = formatPrice(total);
+  if (cartList) {
+    cartList.innerHTML = rows.length
+      ? rows.join("")
+      : "لم تضف أي منتجات بعد.";
+  }
+
+  if (cartTotal) {
+    cartTotal.textContent = formatPrice(total);
+  }
+
+  if (floatingCount) {
+    floatingCount.textContent =
+      `${quantityTotal} ${quantityTotal === 1 ? "قطعة" : "قطع"}`;
+  }
+
+  if (floatingTotal) {
+    floatingTotal.textContent = formatPrice(total);
+  }
+
+  if (floatingCart) {
+    floatingCart.classList.toggle("visible", quantityTotal > 0);
+  }
+
+  document.body.classList.toggle(
+    "has-floating-cart",
+    quantityTotal > 0
+  );
 }
 
 cartList.addEventListener("click", (event) => {
@@ -180,5 +206,10 @@ checkoutButton.addEventListener("click", () => {
   const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join("\n"))}`;
   window.open(url, "_blank", "noopener,noreferrer");
 });
+if (floatingCheckout && checkoutButton) {
+  floatingCheckout.addEventListener("click", () => {
+    checkoutButton.click();
+  });
+}
 
 loadProducts();

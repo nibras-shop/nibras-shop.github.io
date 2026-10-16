@@ -292,3 +292,73 @@ footer {
   background: #c6a76b;
   color: #171510;
 }
+/* سلة الطلب الثابتة أسفل الشاشة */
+.cart-floating {
+  position: fixed;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(620px, calc(100% - 24px));
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 16px;
+  background: #1b1b18;
+  border: 1px solid #c6a76b;
+  border-radius: 14px;
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.5);
+}
+
+.cart-floating.visible {
+  display: flex;
+}
+
+.cart-floating-info {
+  min-width: 0;
+}
+
+.cart-floating-count {
+  color: #b3ad9f;
+  font-size: 12px;
+}
+
+.cart-floating-total {
+  color: #c6a76b;
+  font-size: 21px;
+  font-weight: 800;
+  direction: ltr;
+  text-align: right;
+}
+
+.cart-floating button {
+  flex-shrink: 0;
+  background: #c6a76b;
+  color: #17140e;
+  border: 0;
+  border-radius: 9px;
+  padding: 11px 14px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+body.has-floating-cart {
+  padding-bottom: 100px;
+}
+
+@media (max-width: 420px) {
+  .cart-floating {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .cart-floating button {
+    padding: 10px;
+    font-size: 12px;
+  }
+
+  .cart-floating-total {
+    font-size: 18px;
+  }
+}
