@@ -362,3 +362,19 @@ body.has-floating-cart {
     font-size: 18px;
   }
 }
+/* إعلان التوصيل */
+.delivery-notice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 18px auto;
+  padding: 10px 16px;
+  color: var(--gold);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.8;
+}
