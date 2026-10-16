@@ -1,9 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>لوحة إدارة نبراس</title>
+<head>لوحة إدارة نبراس</title>
 
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -109,6 +106,9 @@
 
 <body>
   <main class="admin-wrap">
+    <a href="index.html" class="home-button">
+  ← العودة إلى القائمة الرئيسية
+</a>
     <h1>نبراس | لوحة الإدارة</h1>
     <p>إدارة المسابح والأساور والأسعار والصور.</p>
 
@@ -170,8 +170,13 @@
           </label>
 
           <button class="primary" type="submit">حفظ المنتج</button>
-          <button id="cancel-edit" class="secondary hidden"
-                  type="button">إلغاء التعديل</button>
+
+<button id="cancel-edit" class="secondary hidden"
+        type="button">إلغاء التعديل</button>
+
+<a href="index.html" class="home-button">
+  العودة إلى القائمة الرئيسية
+</a>
         </form>
 
         <p id="product-status" class="status" role="status"></p>

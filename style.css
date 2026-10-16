@@ -277,3 +277,18 @@ footer {
 #product-search::placeholder {
   color: #999;
 }
+.home-button {
+  display: inline-block;
+  padding: 10px 15px;
+  margin: 8px 4px 0 0;
+  border: 1px solid #c6a76b;
+  border-radius: 7px;
+  color: #c6a76b;
+  text-decoration: none;
+  font: inherit;
+}
+
+.home-button:hover {
+  background: #c6a76b;
+  color: #171510;
+}
